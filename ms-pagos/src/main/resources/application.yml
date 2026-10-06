@@ -8,5 +8,6 @@ spring:
       fail-fast: true
       retry:
         initial-interval: 2000
+        max-interval: 10000
         multiplier: 1.5
         max-attempts: 15
