@@ -3,7 +3,7 @@
 # Uso: anotar-log.sh <archivo-log> <titulo>
 LOG=$1; TITULO=$2
 [[ -f "$LOG" ]] || exit 0
-RESUMEN=$( { grep -E "\[ERROR\]|FAIL|Tests run:.*Fail|Caused by|Exception|expected|but was|BUILD|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED" "$LOG" \
+RESUMEN=$( { grep -E "Tests run:|<<< FAIL" "$LOG" | head -60; grep -E "\[ERROR\]|FAIL|Tests run:.*Fail|Caused by|Exception|expected|but was|BUILD|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED" "$LOG" \
   | grep -vE "^\s*at " | head -250; } | cut -c1-400 )
 RESUMEN=${RESUMEN:0:60000}
 RESUMEN="${RESUMEN//'%'/'%25'}"
