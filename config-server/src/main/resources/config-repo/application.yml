@@ -16,6 +16,11 @@ eureka:
     lease-expiration-duration-in-seconds: 30
 
 spring:
+  cloud:
+    loadbalancer:
+      cache:
+        # Las réplicas nuevas (o caídas) se reflejan en el balanceo en pocos segundos
+        ttl: 5s
   threads:
     virtual:
       enabled: true

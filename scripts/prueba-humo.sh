@@ -59,13 +59,15 @@ comprobar "token web en BFF móvil -> 401 (audiencia incorrecta)" \
 titulo "4. BFF Web"
 esperar "resumen del cliente 1 disponible" \
   '[[ $(curl -sk -H "Authorization: Bearer $T_WEB" $WEB/web/clientes/1/resumen | jq -r .cliente.rut) == "12345678-5" ]]'
+esperar "ruta a ms-pagos disponible" \
+  '[[ $(curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $T_WEB" $WEB/web/cuentas/1/operaciones) == "200" ]]'
 RESUMEN=$(curl -sk -H "Authorization: Bearer $T_WEB" $WEB/web/clientes/1/resumen)
 comprobar "resumen trae 2 cuentas" "$(echo "$RESUMEN" | jq '.cuentas | length')" "2"
 TRX=$(curl -sk -H "Authorization: Bearer $T_WEB" -H 'Content-Type: application/json' -H "Idempotency-Key: humo-$RANDOM" \
   -d '{"cuentaOrigenId":1,"cuentaDestinoId":3,"monto":10000,"descripcion":"Prueba humo"}' $WEB/web/transferencias)
 comprobar "transferencia web" "$(echo "$TRX" | jq -r .estado)" "COMPLETADO"
 SALDO_INSUF=$(curl -sk -H "Authorization: Bearer $T_WEB" -H 'Content-Type: application/json' \
-  -d '{"cuentaOrigenId":4,"cuentaDestinoId":1,"monto":99999999}' -o /dev/null -w '%{http_code}' $WEB/web/transferencias)
+  -d '{"cuentaOrigenId":4,"cuentaDestinoId":1,"monto":9999999}' -o /dev/null -w '%{http_code}' $WEB/web/transferencias)
 comprobar "transferencia sin saldo -> 422" "$SALDO_INSUF" "422"
 
 titulo "5. BFF Móvil"
