@@ -1,0 +1,45 @@
+server:
+  ssl:
+    enabled: false
+spring:
+  application:
+    name: bff-web
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  kafka:
+    bootstrap-servers: localhost:65530
+    admin:
+      auto-create: false
+    producer:
+      properties:
+        max.block.ms: 200
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
+          audiences: [frontend-web]
+      client:
+        registration:
+          banco-api:
+            provider: banco-auth
+            client-id: bff-web-svc
+            client-secret: test
+            authorization-grant-type: client_credentials
+            scope: banco.api
+        provider:
+          banco-auth:
+            token-uri: http://localhost:9000/oauth2/token
+eureka:
+  client:
+    enabled: false
+bff:
+  scope-requerido: canal.web
+atm:
+  terminales-autorizadas: ATM-TEST-01
+  retiro:
+    maximo: 200000
+    multiplo: 5000

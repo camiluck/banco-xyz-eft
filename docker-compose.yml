@@ -1,0 +1,301 @@
+# =============================================================================
+#  Banco XYZ - Arquitectura de microservicios (desarrollo / demo / nube)
+#
+#  Levantar todo:            docker compose up -d --build
+#  Escalar horizontalmente:  docker compose up -d --scale ms-cuentas=3 --scale ms-pagos=3
+#  Ver estado:               docker compose ps
+#
+#  Puertos publicados en el host:
+#    8888 config-server | 8761 eureka | 9000 auth-server | 8080 api-gateway
+#    8443 bff-web (HTTPS) | 8444 bff-movil (HTTPS) | 8445 bff-atm (HTTPS)
+#    8090 batch-service | 8085 kafka-ui
+#  Los microservicios de negocio NO publican puertos: sólo se llega a ellos a
+#  través del gateway, así se pueden levantar N réplicas sin conflictos.
+# =============================================================================
+name: banco-xyz
+
+x-java-env: &java-env
+  CONFIG_URL: http://config-server:8888
+  EUREKA_URL: http://eureka-server:8761/eureka
+  KAFKA_BOOTSTRAP: kafka:9092
+  AUTH_ISSUER: http://auth-server:9000
+  JAVA_OPTS: -XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
+
+x-java-service: &java-service
+  restart: unless-stopped
+  networks: [banco]
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+
+x-depends-infra: &depends-infra
+  config-server: { condition: service_healthy }
+  eureka-server: { condition: service_healthy }
+  auth-server: { condition: service_healthy }
+  kafka: { condition: service_healthy }
+
+services:
+  # ------------------------------------------------------------- infraestructura de datos
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: banco
+      POSTGRES_PASSWORD: banco123
+      POSTGRES_DB: banco
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banco"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [banco]
+
+  kafka:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "29092:29092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
+    networks: [banco]
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: banco-xyz
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8085:8080"
+    depends_on:
+      kafka: { condition: service_healthy }
+    networks: [banco]
+
+  # ------------------------------------------------------------- Spring Cloud
+  config-server:
+    <<: *java-service
+    build: { context: ., args: { MODULE: config-server } }
+    image: bancoxyz/config-server:1.0
+    environment: *java-env
+    ports: ["8888:8888"]
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  eureka-server:
+    <<: *java-service
+    build: { context: ., args: { MODULE: eureka-server } }
+    image: bancoxyz/eureka-server:1.0
+    environment:
+      <<: *java-env
+      EUREKA_HOSTNAME: eureka-server
+    ports: ["8761:8761"]
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  auth-server:
+    <<: *java-service
+    build: { context: ., args: { MODULE: auth-server } }
+    image: bancoxyz/auth-server:1.0
+    environment:
+      <<: *java-env
+      # Secretos de los clientes OAuth2 (en producción: archivo .env o AWS Secrets Manager)
+      SECRET_FRONTEND_WEB: ${SECRET_FRONTEND_WEB:-web-secret}
+      SECRET_FRONTEND_MOVIL: ${SECRET_FRONTEND_MOVIL:-movil-secret}
+      SECRET_CAJERO_ATM: ${SECRET_CAJERO_ATM:-atm-secret}
+    ports: ["9000:9000"]
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:9000/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  api-gateway:
+    <<: *java-service
+    build: { context: ., args: { MODULE: api-gateway } }
+    image: bancoxyz/api-gateway:1.0
+    environment: *java-env
+    ports: ["8080:8080"]
+    depends_on: *depends-infra
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ------------------------------------------------------------- microservicios de negocio
+  ms-cuentas:
+    <<: *java-service
+    build: { context: ., args: { MODULE: ms-cuentas } }
+    image: bancoxyz/ms-cuentas:1.0
+    environment:
+      <<: *java-env
+      DB_URL: jdbc:postgresql://postgres:5432/cuentas_db
+      DB_USER: banco
+      DB_PASSWORD: banco123
+    depends_on:
+      <<: *depends-infra
+      postgres: { condition: service_healthy }
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  ms-pagos:
+    <<: *java-service
+    build: { context: ., args: { MODULE: ms-pagos } }
+    image: bancoxyz/ms-pagos:1.0
+    environment:
+      <<: *java-env
+      DB_URL: jdbc:postgresql://postgres:5432/pagos_db
+      DB_USER: banco
+      DB_PASSWORD: banco123
+    depends_on:
+      <<: *depends-infra
+      postgres: { condition: service_healthy }
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  ms-clientes:
+    <<: *java-service
+    build: { context: ., args: { MODULE: ms-clientes } }
+    image: bancoxyz/ms-clientes:1.0
+    environment:
+      <<: *java-env
+      DB_URL: jdbc:postgresql://postgres:5432/clientes_db
+      DB_USER: banco
+      DB_PASSWORD: banco123
+    depends_on:
+      <<: *depends-infra
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ------------------------------------------------------------- Backend for Frontend (HTTPS)
+  bff-web:
+    <<: *java-service
+    build: { context: ., args: { MODULE: bff-web } }
+    image: bancoxyz/bff-web:1.0
+    environment: *java-env
+    ports: ["8443:8443"]
+    depends_on: *depends-infra
+    healthcheck:
+      test: ["CMD", "curl", "-fsk", "https://localhost:8443/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  bff-movil:
+    <<: *java-service
+    build: { context: ., args: { MODULE: bff-movil } }
+    image: bancoxyz/bff-movil:1.0
+    environment: *java-env
+    ports: ["8444:8444"]
+    depends_on: *depends-infra
+    healthcheck:
+      test: ["CMD", "curl", "-fsk", "https://localhost:8444/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  bff-atm:
+    <<: *java-service
+    build: { context: ., args: { MODULE: bff-atm } }
+    image: bancoxyz/bff-atm:1.0
+    environment: *java-env
+    ports: ["8445:8445"]
+    depends_on: *depends-infra
+    healthcheck:
+      test: ["CMD", "curl", "-fsk", "https://localhost:8445/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ------------------------------------------------------------- procesos batch
+  batch-service:
+    <<: *java-service
+    build: { context: ., args: { MODULE: batch-service } }
+    image: bancoxyz/batch-service:1.0
+    environment:
+      <<: *java-env
+      DB_URL: jdbc:postgresql://postgres:5432/batch_db
+      DB_USER: banco
+      DB_PASSWORD: banco123
+      BATCH_INPUT_DIR: /app/data
+      BATCH_OUTPUT_DIR: /app/output
+    volumes:
+      - ./batch-service/data:/app/data:ro
+      - batch-output:/app/output
+    ports: ["8090:8090"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
+      auth-server: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+networks:
+  banco:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  batch-output:

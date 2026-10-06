@@ -1,0 +1,106 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: auth-server
+  security:
+    oauth2:
+      authorizationserver:
+        # El emisor (claim "iss") es fijo para que todos los servicios validen el mismo valor,
+        # sin importar si el token se pidió desde localhost o desde la red de Docker.
+        issuer: ${AUTH_ISSUER:http://localhost:9000}
+        client:
+          # ---------- Clientes de canal (los usan los frontends para llamar a su BFF) ----------
+          frontend-web:
+            registration:
+              client-id: frontend-web
+              client-secret: "{noop}${SECRET_FRONTEND_WEB:web-secret}"
+              client-authentication-methods: [client_secret_basic, client_secret_post]
+              authorization-grant-types: [authorization_code, refresh_token, client_credentials]
+              redirect-uris: [http://localhost:3000/callback]
+              scopes: [openid, profile, canal.web]
+            require-authorization-consent: false
+            token:
+              access-token-time-to-live: 30m
+              refresh-token-time-to-live: 8h
+          frontend-movil:
+            registration:
+              client-id: frontend-movil
+              client-secret: "{noop}${SECRET_FRONTEND_MOVIL:movil-secret}"
+              client-authentication-methods: [client_secret_basic, client_secret_post]
+              authorization-grant-types: [authorization_code, refresh_token, client_credentials]
+              redirect-uris: [bancoxyz://callback]
+              scopes: [openid, canal.movil]
+            # Las apps móviles son clientes públicos: se exige PKCE
+            require-proof-key: true
+            require-authorization-consent: false
+            token:
+              access-token-time-to-live: 15m
+              refresh-token-time-to-live: 30d
+          cajero-atm:
+            registration:
+              client-id: cajero-atm
+              client-secret: "{noop}${SECRET_CAJERO_ATM:atm-secret}"
+              client-authentication-methods: [client_secret_basic]
+              # Los cajeros son máquinas: sólo client_credentials y tokens de vida muy corta
+              authorization-grant-types: [client_credentials]
+              scopes: [canal.atm]
+            token:
+              access-token-time-to-live: 2m
+          # ---------- Clientes de servicio (comunicación interna BFF -> microservicios) ----------
+          bff-web-svc:
+            registration:
+              client-id: bff-web-svc
+              client-secret: "{noop}${SECRET_BFF_WEB:bff-web-secret}"
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [banco.api]
+            token:
+              access-token-time-to-live: 5m
+          bff-movil-svc:
+            registration:
+              client-id: bff-movil-svc
+              client-secret: "{noop}${SECRET_BFF_MOVIL:bff-movil-secret}"
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [banco.api]
+            token:
+              access-token-time-to-live: 5m
+          bff-atm-svc:
+            registration:
+              client-id: bff-atm-svc
+              client-secret: "{noop}${SECRET_BFF_ATM:bff-atm-secret}"
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [banco.api]
+            token:
+              access-token-time-to-live: 5m
+          ms-pagos-svc:
+            registration:
+              client-id: ms-pagos-svc
+              client-secret: "{noop}${SECRET_MS_PAGOS:ms-pagos-secret}"
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [banco.api]
+            token:
+              access-token-time-to-live: 5m
+          batch-admin:
+            registration:
+              client-id: batch-admin
+              client-secret: "{noop}${SECRET_BATCH_ADMIN:batch-secret}"
+              client-authentication-methods: [client_secret_basic]
+              authorization-grant-types: [client_credentials]
+              scopes: [batch.admin]
+            token:
+              access-token-time-to-live: 10m
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    org.springframework.security: INFO

@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: ms-cuentas
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:cuentas-test;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: none
+  kafka:
+    bootstrap-servers: localhost:65530
+    admin:
+      auto-create: false
+    producer:
+      properties:
+        max.block.ms: 200
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
+eureka:
+  client:
+    enabled: false
+cuentas:
+  pin:
+    intentos-maximos: 3

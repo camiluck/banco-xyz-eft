@@ -1,0 +1,20 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          # Se puede sobreescribir para leer desde una carpeta externa (ej: file:/config-repo)
+          search-locations: ${CONFIG_SEARCH_LOCATIONS:classpath:/config-repo}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

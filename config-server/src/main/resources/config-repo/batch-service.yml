@@ -1,0 +1,8 @@
+server:
+  port: ${PORT:8090}
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:batch;DB_CLOSE_DELAY=-1}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}

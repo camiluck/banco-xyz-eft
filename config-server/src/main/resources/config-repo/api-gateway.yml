@@ -1,0 +1,15 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

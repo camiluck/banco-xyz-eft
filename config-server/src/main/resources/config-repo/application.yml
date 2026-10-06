@@ -1,0 +1,58 @@
+# =====================================================================
+# Configuración COMPARTIDA por todos los servicios (Spring Cloud Config)
+# Cada valor ${VARIABLE:defecto} se puede sobreescribir con variables de
+# entorno (así se configura el entorno Docker / AWS sin recompilar).
+# =====================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    # Id único por instancia: permite levantar N réplicas del mismo servicio
+    instance-id: ${spring.application.name}:${random.uuid}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+spring:
+  threads:
+    virtual:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      retries: 5
+      properties:
+        enable.idempotence: true
+        # Si Kafka no responde, no bloquear la petición HTTP más de 5 s
+        max.block.ms: 5000
+    consumer:
+      auto-offset-reset: earliest
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Se valida la firma con las llaves públicas del auth-server y el emisor del token
+          issuer-uri: ${AUTH_ISSUER:http://localhost:9000}
+          jwk-set-uri: ${AUTH_ISSUER:http://localhost:9000}/oauth2/jwks
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Cada línea de log lleva el nombre del servicio y el traceId/spanId (trazabilidad distribuida)
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: batch-service
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:batch-test;DB_CLOSE_DELAY=-1
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/schema-negocio.sql
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
+eureka:
+  client:
+    enabled: false
+batch:
+  input-dir: data
+  output-dir: target/reportes-test
+  chunk-size: 50
+  hilos: 3
+  max-omisiones: 1000
+  tasa-anual:
+    ahorro: 0.030
+    prestamo: 0.120
+    hipoteca: 0.048
+  reejecucion:
+    habilitada: true
+    max-intentos: 3
+    espera-segundos: 1
+  programacion:
+    habilitada: false

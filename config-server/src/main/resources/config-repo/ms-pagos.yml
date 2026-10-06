@@ -1,0 +1,60 @@
+server:
+  port: ${PORT:8082}
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:pagos;DB_CLOSE_DELAY=-1}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: none   # el esquema lo crea Flyway (src/main/resources/db/migration)
+    open-in-view: false
+  kafka:
+    consumer:
+      group-id: ms-pagos
+  security:
+    oauth2:
+      client:
+        registration:
+          banco-api:
+            provider: banco-auth
+            client-id: ms-pagos-svc
+            client-secret: ${SECRET_MS_PAGOS:ms-pagos-secret}
+            authorization-grant-type: client_credentials
+            scope: banco.api
+        provider:
+          banco-auth:
+            token-uri: ${AUTH_ISSUER:http://localhost:9000}/oauth2/token
+
+pagos:
+  monto-alerta: 5000000
+  reintento:
+    intervalo-ms: 30000
+    max-intentos: 5
+
+# ---------------- Resilience4j: llamadas a ms-cuentas ----------------
+resilience4j:
+  circuitbreaker:
+    instances:
+      cuentas:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        # Un 4xx (saldo insuficiente, cuenta cerrada) es un error de negocio, no una falla del servicio
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+  retry:
+    instances:
+      cuentas:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException

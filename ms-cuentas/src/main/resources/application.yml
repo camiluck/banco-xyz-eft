@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: ms-cuentas
+  config:
+    import: "configserver:${CONFIG_URL:http://localhost:8888}"
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-attempts: 15

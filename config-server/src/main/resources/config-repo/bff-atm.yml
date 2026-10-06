@@ -1,0 +1,72 @@
+server:
+  port: ${PORT:8445}
+  # Comunicación segura: HTTPS con certificado (keystore PKCS12)
+  ssl:
+    enabled: ${SSL_ENABLED:true}
+    key-store: ${SSL_KEYSTORE:classpath:certs/bff-keystore.p12}
+    key-store-password: ${SSL_KEYSTORE_PASSWORD:bancoxyz}
+    key-store-type: PKCS12
+    key-alias: bff
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 512
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Sólo se aceptan tokens emitidos para el cliente de este canal
+          audiences: [cajero-atm]
+      client:
+        registration:
+          banco-api:
+            provider: banco-auth
+            client-id: bff-atm-svc
+            client-secret: ${SECRET_BFF_ATM:bff-atm-secret}
+            authorization-grant-type: client_credentials
+            scope: banco.api
+        provider:
+          banco-auth:
+            token-uri: ${AUTH_ISSUER:http://localhost:9000}/oauth2/token
+
+bff:
+  canal: atm
+  scope-requerido: canal.atm
+  gateway-url: ${GATEWAY_URL:http://api-gateway}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 2
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+    instances:
+      clientes: { base-config: default }
+      cuentas: { base-config: default }
+      pagos: { base-config: default }
+  retry:
+    configs:
+      default:
+        max-attempts: 2
+        wait-duration: 300ms
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+    instances:
+      clientes: { base-config: default }
+      cuentas: { base-config: default }
+      pagos: { base-config: default }
+
+atm:
+  # Terminales autorizadas (en producción vendría de una base de datos de dispositivos)
+  terminales-autorizadas: ATM-STGO-001,ATM-STGO-002,ATM-VALPO-001
+  retiro:
+    maximo: 200000
+    multiplo: 5000

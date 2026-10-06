@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: ms-pagos
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:pagos-test;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: none
+  kafka:
+    bootstrap-servers: localhost:65530
+    admin:
+      auto-create: false
+    producer:
+      properties:
+        max.block.ms: 200
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
+      client:
+        registration:
+          banco-api:
+            provider: banco-auth
+            client-id: ms-pagos-svc
+            client-secret: test
+            authorization-grant-type: client_credentials
+            scope: banco.api
+        provider:
+          banco-auth:
+            token-uri: http://localhost:9000/oauth2/token
+eureka:
+  client:
+    enabled: false
+app:
+  kafka:
+    listeners: false
+pagos:
+  monto-alerta: 5000000
+  reintento:
+    intervalo-ms: 3600000
+    max-intentos: 2
+resilience4j:
+  circuitbreaker:
+    instances:
+      cuentas:
+        minimum-number-of-calls: 100
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+  retry:
+    instances:
+      cuentas:
+        max-attempts: 2
+        wait-duration: 10ms
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException

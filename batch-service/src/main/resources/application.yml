@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: batch-service
+  config:
+    import: "configserver:${CONFIG_URL:http://localhost:8888}"
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-attempts: 15
+  batch:
+    job:
+      enabled: false            # los jobs se lanzan por API REST o por el planificador
+    jdbc:
+      initialize-schema: always # crea las tablas BATCH_* de Spring Batch
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/schema-negocio.sql
+      continue-on-error: false
+
+batch:
+  input-dir: ${BATCH_INPUT_DIR:data}
+  output-dir: ${BATCH_OUTPUT_DIR:output}
+  chunk-size: 100
+  hilos: 4
+  max-omisiones: 1000
+  tasa-anual:
+    ahorro: 0.030      # 3,0 % anual  -> 0,25 % mensual (interés ganado)
+    prestamo: 0.120    # 12,0 % anual -> 1,00 % mensual (interés cobrado)
+    hipoteca: 0.048    # 4,8 % anual  -> 0,40 % mensual (interés cobrado)
+  reejecucion:
+    habilitada: true
+    max-intentos: 3
+    espera-segundos: 30
+  programacion:
+    habilitada: ${BATCH_PROGRAMACION:false}
+    transacciones-cron: "0 0 2 * * *"      # todos los días 02:00
+    intereses-cron: "0 0 3 1 * *"          # día 1 de cada mes 03:00
+    estados-cron: "0 0 4 2 1 *"            # 2 de enero 04:00
+    dataset: semana_3
