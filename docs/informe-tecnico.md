@@ -1,6 +1,6 @@
 # Informe técnico: modernización del backend del Banco XYZ
 
-> Contenido base para el informe en PDF. Copiar cada sección en la plantilla `PBY2203_EFT_S9_plantilla_PDF` del AVA. Los diagramas Mermaid se ven renderizados en GitHub; se pueden capturar como imagen desde ahí o desde https://mermaid.live.
+> Versión en PDF: `docs/informe-tecnico.pdf`. Los diagramas Mermaid se ven renderizados en GitHub.
 
 ---
 
@@ -14,10 +14,10 @@ Este informe describe la solución desarrollada: una arquitectura de microservic
 
 - **General:** migrar el sistema legacy a una arquitectura moderna, escalable, resiliente y segura, desplegable en la nube.
 - **Específicos:**
-  1. Reescribir los 3 procesos batch en Spring Batch, con manejo avanzado de errores, paralelismo y resultados equivalentes al legacy.
-  2. Implementar el patrón Backend for Frontend para 3 canales, optimizando el rendimiento y la seguridad de cada uno.
-  3. Crear los microservicios de Cuentas, Pagos y Clientes con Spring Cloud, Resilience4j, OAuth2 y Kafka.
-  4. Contenerizar la solución con Docker y prepararla para escalar horizontalmente en AWS.
+    1. Reescribir los 3 procesos batch en Spring Batch, con manejo avanzado de errores, paralelismo y resultados equivalentes al legacy.
+    2. Implementar el patrón Backend for Frontend para 3 canales, optimizando el rendimiento y la seguridad de cada uno.
+    3. Crear los microservicios de Cuentas, Pagos y Clientes con Spring Cloud, Resilience4j, OAuth2 y Kafka.
+    4. Contenerizar la solución con Docker y prepararla para escalar horizontalmente en AWS.
 
 ### 1.2 Alcance
 
@@ -49,39 +49,52 @@ Este informe describe la solución desarrollada: una arquitectura de microservic
 
 ```mermaid
 flowchart TB
-    subgraph Canales
-        W[Web] --- M[Móvil] --- A[Cajeros]
+    subgraph CAN[Canales]
+        W[Navegador web]
+        M[App móvil]
+        A[Cajero automático]
     end
-    subgraph Borde["Capa BFF (HTTPS)"]
-        BW[bff-web] --- BM[bff-movil] --- BA[bff-atm]
+    subgraph BFF[Capa BFF · HTTPS]
+        BW[bff-web]
+        BM[bff-movil]
+        BA[bff-atm]
     end
-    subgraph Plataforma["Spring Cloud"]
-        CFG[config-server] --- EU[eureka-server] --- AUTH[auth-server OAuth2]
-        GW[api-gateway]
+    GW[api-gateway<br/>rutas · balanceo · circuit breaker]
+    subgraph MS[Microservicios]
+        C[ms-cuentas x2]
+        P[ms-pagos x2]
+        CL[ms-clientes]
     end
-    subgraph Negocio["Microservicios"]
-        C[ms-cuentas] --- P[ms-pagos] --- CL[ms-clientes]
+    subgraph DAT[Datos y eventos]
+        PG[(PostgreSQL<br/>1 BD por servicio)]
+        K[(Apache Kafka)]
     end
-    subgraph Datos
-        PG[(PostgreSQL: cuentas_db · pagos_db · clientes_db · batch_db)]
-        K[(Kafka: transacciones-completadas · alertas-seguridad · cuentas-eventos)]
+    subgraph PLAT[Plataforma Spring Cloud]
+        CFG[config-server]
+        EU[eureka-server]
+        AUTH[auth-server OAuth2]
     end
-    B[batch-service] --> PG
+    B[batch-service<br/>Spring Batch]
     W --> BW
     M --> BM
     A --> BA
-    BW & BM & BA --> GW --> C & P & CL
+    BW & BM & BA --> GW
+    GW --> C & P & CL
+    P --> C
     C & P & CL --> PG
-    C & P & BA --> K --> CL & P
+    C & P & BA --> K
+    K --> CL
+    B --> PG
+    MS -.-> PLAT
 ```
 
 ### 4.2 Diagrama de componentes
 
 ```mermaid
 flowchart LR
-    subgraph ms-pagos
-        PC[PagoController] --> PS[PagoService<br/>saga]
-        PS --> CC[CuentasClient<br/>@Retry @CircuitBreaker]
+    subgraph MSP[ms-pagos]
+        PC[PagoController] --> PS["PagoService<br/>(saga)"]
+        PS --> CC["CuentasClient<br/>Retry + CircuitBreaker"]
         PS --> PR[(PagoRepository)]
         PS --> PE[PublicadorEventos]
         SCH[ReintentoPagosScheduler] --> PS
