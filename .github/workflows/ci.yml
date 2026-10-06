@@ -17,7 +17,14 @@ jobs:
           java-version: '21'
           cache: maven
       - name: mvn verify
-        run: mvn -B -ntp verify
+        run: set -o pipefail; mvn -B -ntp -fae verify 2>&1 | tee build.log
+      - name: Resumen de errores
+        if: failure()
+        run: |
+          .github/scripts/anotar-log.sh build.log "mvn verify"
+          for f in $(grep -l -E "FAILURE|ERROR" */target/surefire-reports/*.txt 2>/dev/null); do
+            .github/scripts/anotar-log.sh "$f" "test $(basename $f .txt)"
+          done
       - name: Reportes de pruebas
         if: always()
         uses: actions/upload-artifact@v4
@@ -40,7 +47,14 @@ jobs:
       - name: Estado
         run: docker compose ps
       - name: Prueba de humo
-        run: ./scripts/prueba-humo.sh
+        run: set -o pipefail; ./scripts/prueba-humo.sh 2>&1 | tee humo.log
       - name: Logs (si falla)
         if: failure()
-        run: docker compose logs --no-color --tail=200
+        run: |
+          docker compose ps -a > ps.log 2>&1
+          .github/scripts/anotar-log.sh ps.log "docker compose ps"
+          [ -f humo.log ] && .github/scripts/anotar-log.sh humo.log "prueba de humo"
+          for s in $(docker compose ps -a --services); do
+            docker compose logs --no-color --tail=300 $s > svc-$s.log 2>&1
+            if grep -qE "ERROR|Exception|unhealthy" svc-$s.log; then .github/scripts/anotar-log.sh svc-$s.log "logs $s"; fi
+          done
