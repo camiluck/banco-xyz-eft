@@ -2,6 +2,8 @@
 
 **Evaluación Final Transversal · Desarrollo Backend III (PBY2203)**
 
+**Código fuente:** https://github.com/camiluck/banco-xyz-eft
+
 Este proyecto migra el sistema bancario legacy del Banco XYZ (COBOL y scripts Shell en mainframe) a una **arquitectura de microservicios en la nube** construida con **Spring Boot 3.5, Spring Cloud 2025, Spring Batch 5, Apache Kafka, Resilience4j y Docker**.
 
 | Documento | Contenido |
