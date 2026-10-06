@@ -48,6 +48,12 @@ jobs:
         run: docker compose ps
       - name: Prueba de humo
         run: set -o pipefail; ./scripts/prueba-humo.sh 2>&1 | tee humo.log
+      - name: Demo del video (no interactiva)
+        run: |
+          sleep 30
+          yes "" | ./scripts/demo-video.sh 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | tee demo.log
+          RES=$(head -c 60000 demo.log); RES="${RES//'%'/'%25'}"; RES="${RES//$'\n'/'%0A'}"
+          echo "::notice title=demo-video::${RES}"
       - name: Logs (si falla)
         if: failure()
         run: |
