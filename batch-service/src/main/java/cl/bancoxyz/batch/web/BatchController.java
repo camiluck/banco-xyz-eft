@@ -120,7 +120,9 @@ public class BatchController {
         r.put("salida", e.getExitStatus().getExitCode());
         r.put("inicio", e.getStartTime());
         r.put("fin", e.getEndTime());
-        r.put("parametros", e.getJobParameters().toProperties());
+        Map<String, Object> parametros = new TreeMap<>();
+        e.getJobParameters().getParameters().forEach((k, v) -> parametros.put(k, v.getValue()));
+        r.put("parametros", parametros);
         r.put("intentos", explorer.getJobExecutions(e.getJobInstance()).size());
         r.put("errores", e.getAllFailureExceptions().stream().map(Throwable::getMessage).toList());
         r.put("pasos", pasos);
