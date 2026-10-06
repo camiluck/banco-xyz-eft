@@ -52,8 +52,11 @@ jobs:
         run: |
           sleep 30
           yes "" | ./scripts/demo-video.sh 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | tee demo.log
-          RES=$(head -c 60000 demo.log); RES="${RES//'%'/'%25'}"; RES="${RES//$'\n'/'%0A'}"
-          echo "::notice title=demo-video::${RES}"
+          csplit -s -z -f escena- demo.log '/^ESCENA /' '{*}' || true
+          for f in escena-*; do
+            RES=$(grep -vE '^\s*$|ENTER para' "$f" | tr -s ' ' | head -c 3800); RES="${RES//'%'/'%25'}"; RES="${RES//$'\n'/'%0A'}"
+            echo "::notice title=demo $f::${RES}"
+          done
       - name: Logs (si falla)
         if: failure()
         run: |
