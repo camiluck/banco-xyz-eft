@@ -13,7 +13,7 @@ SOLO=${1:-}
 
 azul()  { printf "\n\033[1;34m%s\033[0m\n" "$*"; }
 gris()  { printf "\033[0;90m$ %s\033[0m\n" "$*"; }
-pausa() { printf "\n\033[0;33m[ENTER para continuar]\033[0m"; read -r _; }
+pausa() { printf "\n\033[0;33m[ENTER para continuar]\033[0m"; read -r _; echo; }
 correr(){ gris "$1"; eval "$1"; echo; }
 escena(){ [[ -z "$SOLO" || "$SOLO" == "$1" ]]; }
 token() { curl -s -u "$1:$2" -d grant_type=client_credentials -d "scope=$3" $AUTH/oauth2/token | jq -r .access_token; }
@@ -57,7 +57,7 @@ if escena 2; then
   RESP=$(curl -s -X POST -H "Authorization: Bearer $T_BATCH" "$BATCH/api/batch/jobs/interesesMensualesJob?dataset=semana_1&simularFalloTransitorio=true")
   gris "curl -X POST .../interesesMensualesJob?dataset=semana_1&simularFalloTransitorio=true"
   EID=$(echo "$RESP" | jq -r .ejecucionId); sleep 6
-  correr "docker compose logs --since 30s batch-service | grep -E 'SIMULACION|rollbacks|terminó' | cut -c1-220"
+  correr "docker compose logs --no-log-prefix --since 30s batch-service | grep -E 'SIMULACION|rollbacks|terminó' | sed -E 's/^.{11}([0-9:]{8}).* : /\\1  /' | cut -c1-150"
   correr "curl -s -H \"Authorization: Bearer \$T_BATCH\" $BATCH/api/batch/ejecuciones/$EID | jq '{estado, pasos: [.pasos[] | {paso, escritos, rollbacks}]}'"
   pausa
 fi
