@@ -1,0 +1,40 @@
+name: Capturas para el video
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar el sistema
+        run: docker compose up -d --build --wait --wait-timeout 600
+      - name: Esperar registro en Eureka
+        run: sleep 60
+      - name: Ejecutar las escenas de la demo
+        run: |
+          mkdir -p capturas
+          docker compose ps --format 'table {{.Name}}\t{{.Status}}' > capturas/term-compose-ps.txt
+          for n in 1 2 3 4 5; do
+            yes "" | ./scripts/demo-video.sh $n 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > capturas/escena-$n.txt || true
+            sleep 3
+          done
+      - name: Capturas web (antes de la escena de resiliencia)
+        run: |
+          cd .github/capturas && npm init -y >/dev/null && npm i playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          node capturar.mjs ../../capturas
+      - name: Escena 6 (resiliencia)
+        run: yes "" | ./scripts/demo-video.sh 6 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > capturas/escena-6.txt || true
+      - name: Publicar capturas en la rama "capturas"
+        run: |
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git checkout --orphan capturas
+          git rm -rfq --cached . >/dev/null
+          git add capturas
+          git commit -qm "Capturas para el video"
+          git push -f origin capturas
