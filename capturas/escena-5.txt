@@ -1,0 +1,23 @@
+
+ESCENA 5 · Kafka: una transferencia genera eventos en tiempo real
+$ curl -sk -H "Authorization: Bearer $T_MOVIL" -H 'Content-Type: application/json' -d '{"origen":1,"destino":3,"monto":15000,"glosa":"Demo video"}' https://localhost:8444/movil/transferencias | jq
+{
+  "ref": "MOV-8bf801c2-0ebb-48f3-a155-1092a476801b",
+  "estado": "COMPLETADO",
+  "msg": "Transferencia realizada"
+}
+
+Aviso que recibió María (cliente 2, dueña de la cuenta destino):
+$ curl -sk -H "Authorization: Bearer $T_MOVIL" https://localhost:8444/movil/clientes/2/avisos | jq '.[0:2]'
+[
+  {
+    "msg": "Recibiste $15.000 (TRANSFERENCIA). Ref: MOV-8bf801c2-0ebb-48f3-a155-1092a476801b",
+    "f": "2026-10-11"
+  }
+]
+
+👉 Ahora muestra Kafka UI: http://localhost:8085 → Topics → transacciones-completadas → Messages
+
+[ENTER para continuar]
+
+Fin de la demo ✔

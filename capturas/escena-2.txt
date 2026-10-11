@@ -1,0 +1,187 @@
+
+ESCENA 2 · Proceso batch: Reporte de Transacciones Diarias (1.000 registros legacy)
+$ curl -X POST http://localhost:8090/api/batch/jobs/transaccionesDiariasJob?dataset=semana_3
+{
+  "consultar": "/api/batch/ejecuciones/1",
+  "estado": "STARTING",
+  "instanciaId": 1,
+  "job": "transaccionesDiariasJob",
+  "ejecucionId": 1
+}
+Procesando.
+
+[ENTER para continuar]
+
+Resultado por paso y por partición (leídos / escritos / omitidos)
+$ curl -s -H "Authorization: Bearer $T_BATCH" http://localhost:8090/api/batch/ejecuciones/1 | jq '{estado, salida, pasos: [.pasos[] | {paso, salida, leidos, escritos, omitidos, commits}]}'
+{
+  "estado": "COMPLETED",
+  "salida": "COMPLETED",
+  "pasos": [
+    {
+      "paso": "transaccionesArchivoStep:partition0",
+      "salida": "COMPLETED",
+      "leidos": 1000,
+      "escritos": 789,
+      "omitidos": 211,
+      "commits": 11
+    },
+    {
+      "paso": "transaccionesCargaStep",
+      "salida": "COMPLETADO_CON_OMISIONES",
+      "leidos": 1000,
+      "escritos": 789,
+      "omitidos": 211,
+      "commits": 11
+    },
+    {
+      "paso": "transaccionesResumenStep",
+      "salida": "COMPLETED",
+      "leidos": 0,
+      "escritos": 325,
+      "omitidos": 0,
+      "commits": 1
+    }
+  ]
+}
+
+
+[ENTER para continuar]
+
+Registros rechazados: cada uno queda auditado con su motivo (el legacy fallaba en silencio)
+$ curl -s -H "Authorization: Bearer $T_BATCH" http://localhost:8090/api/batch/resultados/1/rechazos | jq
+[
+  {
+    "motivo": "MONTO_VACIO",
+    "cantidad": 162
+  },
+  {
+    "motivo": "FECHA_INVALIDA",
+    "cantidad": 49
+  }
+]
+
+$ curl -s -H "Authorization: Bearer $T_BATCH" "http://localhost:8090/api/batch/resultados/1/rechazos?detalle=true" | jq '.[0:3]'
+[
+  {
+    "archivo": "semana_3/movimientos_financieros_diarios.csv",
+    "linea": 6,
+    "contenido": "5,17-08-2024,,debito",
+    "motivo": "MONTO_VACIO: el campo monto está vacío"
+  },
+  {
+    "archivo": "semana_3/movimientos_financieros_diarios.csv",
+    "linea": 7,
+    "contenido": "6,2024-09-26,,invalido",
+    "motivo": "MONTO_VACIO: el campo monto está vacío"
+  },
+  {
+    "archivo": "semana_3/movimientos_financieros_diarios.csv",
+    "linea": 18,
+    "contenido": "17,21-02-2024,,debito",
+    "motivo": "MONTO_VACIO: el campo monto está vacío"
+  }
+]
+
+
+[ENTER para continuar]
+
+Resumen diario generado (primeros 5 días)
+$ curl -s -H "Authorization: Bearer $T_BATCH" http://localhost:8090/api/batch/resultados/1/transacciones | jq '.[0:5]'
+[
+  {
+    "instancia_id": 1,
+    "fecha": "2024-01-01",
+    "total_registros": 4,
+    "cantidad_creditos": 1,
+    "cantidad_debitos": 1,
+    "monto_creditos": 1000.00,
+    "monto_debitos": 3000.00,
+    "saldo_neto": -2000.00,
+    "anomalias": 2
+  },
+  {
+    "instancia_id": 1,
+    "fecha": "2024-01-02",
+    "total_registros": 1,
+    "cantidad_creditos": 0,
+    "cantidad_debitos": 1,
+    "monto_creditos": 0.00,
+    "monto_debitos": 3000.00,
+    "saldo_neto": -3000.00,
+    "anomalias": 0
+  },
+  {
+    "instancia_id": 1,
+    "fecha": "2024-01-03",
+    "total_registros": 4,
+    "cantidad_creditos": 2,
+    "cantidad_debitos": 0,
+    "monto_creditos": 2700.00,
+    "monto_debitos": 0.00,
+    "saldo_neto": 2700.00,
+    "anomalias": 2
+  },
+  {
+    "instancia_id": 1,
+    "fecha": "2024-01-04",
+    "total_registros": 2,
+    "cantidad_creditos": 0,
+    "cantidad_debitos": 1,
+    "monto_creditos": 0.00,
+    "monto_debitos": 1000.00,
+    "saldo_neto": -1000.00,
+    "anomalias": 1
+  },
+  {
+    "instancia_id": 1,
+    "fecha": "2024-01-05",
+    "total_registros": 2,
+    "cantidad_creditos": 0,
+    "cantidad_debitos": 1,
+    "monto_creditos": 0.00,
+    "monto_debitos": 500.00,
+    "saldo_neto": -500.00,
+    "anomalias": 1
+  }
+]
+
+
+[ENTER para continuar]
+
+Tolerancia a fallos: se simula la caída de la base de datos durante el job
+$ curl -X POST .../interesesMensualesJob?dataset=semana_1&simularFalloTransitorio=true
+$ docker compose logs --no-log-prefix --since 30s batch-service | grep -E 'SIMULACION|rollbacks|terminó' | sed -E 's/^.{11}([0-9:]{8}).* : /\1  /' | cut -c1-150
+02:15:53  Paso transaccionesCargaStep terminado: estado=COMPLETED leidos=1000 escritos=789 filtrados=0 omitidos=211 commits=11 rollbacks=0
+02:15:53  Job transaccionesDiariasJob (ejecución 1) terminó con estado COMPLETED / COMPLETED
+02:15:54  [SIMULACION] Falla transitoria #1 de conexión a la base de datos
+02:15:54  [SIMULACION] Falla transitoria #2 de conexión a la base de datos
+02:15:55  Paso interesesCalculoStep terminado: estado=COMPLETED leidos=8 escritos=8 filtrados=0 omitidos=0 commits=1 rollbacks=2
+02:15:55  Job interesesMensualesJob (ejecución 2) terminó con estado COMPLETED / COMPLETED
+
+$ curl -s -H "Authorization: Bearer $T_BATCH" http://localhost:8090/api/batch/ejecuciones/2 | jq '{estado, pasos: [.pasos[] | {paso, escritos, rollbacks}]}'
+{
+  "estado": "COMPLETED",
+  "pasos": [
+    {
+      "paso": "interesesArchivoStep:partition0",
+      "escritos": 8,
+      "rollbacks": 2
+    },
+    {
+      "paso": "interesesCalculoStep",
+      "escritos": 8,
+      "rollbacks": 2
+    },
+    {
+      "paso": "interesesReporteStep",
+      "escritos": 0,
+      "rollbacks": 0
+    }
+  ]
+}
+
+
+[ENTER para continuar]
+
+Fin de la demo ✔

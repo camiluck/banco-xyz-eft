@@ -1,0 +1,48 @@
+
+ESCENA 4 · Seguridad por canal
+Token del canal WEB usado en el BFF MÓVIL:
+$ curl -sk -o /dev/null -w 'HTTP %{http_code}\n' -H "Authorization: Bearer $T_WEB" https://localhost:8444/movil/cuentas/1/saldo
+HTTP 401
+
+Cajero desde un terminal NO registrado:
+$ curl -sk -H "Authorization: Bearer $T_ATM" -H 'X-Terminal-Id: ATM-FALSO' -H 'Content-Type: application/json' -d '{"cuentaId":1,"pin":"1234"}' https://localhost:8445/atm/consulta-saldo; echo
+{"title":"TERMINAL_NO_AUTORIZADO","codigo":"TERMINAL_NO_AUTORIZADO","status":403}
+
+PIN incorrecto:
+$ curl -sk -H "Authorization: Bearer $T_ATM" -H 'X-Terminal-Id: ATM-STGO-001' -H 'Content-Type: application/json' -d '{"cuentaId":3,"pin":"9999"}' https://localhost:8445/atm/consulta-saldo | jq
+{
+  "type": "about:blank",
+  "title": "PIN_INCORRECTO",
+  "status": 401,
+  "detail": "PIN incorrecto. Intentos restantes: 2",
+  "instance": "/atm/consulta-saldo",
+  "codigo": "PIN_INCORRECTO"
+}
+
+
+[ENTER para continuar]
+
+Retiro en cajero, y el MISMO retiro reenviado (corte de red): no se cobra dos veces
+$ curl -sk -H "Authorization: Bearer $T_ATM" -H 'X-Terminal-Id: ATM-STGO-001' -H 'Idempotency-Key: video-26173' -H 'Content-Type: application/json' -d '{"cuentaId":1,"pin":"1234","monto":20000}' https://localhost:8445/atm/retiros | jq
+{
+  "comprobante": "ATM-ATM-STGO-001-video-26173",
+  "estado": "COMPLETADO",
+  "montoEntregado": 20000,
+  "saldoDisponible": 1480000.00,
+  "mensaje": "Retire su dinero"
+}
+
+$ curl -sk -H "Authorization: Bearer $T_ATM" -H 'X-Terminal-Id: ATM-STGO-001' -H 'Idempotency-Key: video-26173' -H 'Content-Type: application/json' -d '{"cuentaId":1,"pin":"1234","monto":20000}' https://localhost:8445/atm/retiros | jq
+{
+  "comprobante": "ATM-ATM-STGO-001-video-26173",
+  "estado": "COMPLETADO",
+  "montoEntregado": 20000.00,
+  "saldoDisponible": 1480000.00,
+  "mensaje": "Retire su dinero"
+}
+
+👉 Fíjate: mismo comprobante y mismo saldo.
+
+[ENTER para continuar]
+
+Fin de la demo ✔

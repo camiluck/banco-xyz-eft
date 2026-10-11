@@ -1,0 +1,85 @@
+
+ESCENA 6 · Resiliencia: se apaga el microservicio de clientes
+$ docker compose stop ms-clientes
+ Container banco-xyz-ms-clientes-1  Stopping
+ Container banco-xyz-ms-clientes-1  Stopped
+
+Web: el perfil es esencial → error controlado e inmediato (no un timeout):
+$ curl -sk -H "Authorization: Bearer $T_WEB" https://localhost:8443/web/clientes/1/resumen | jq
+{
+  "type": "about:blank",
+  "title": "SERVICIO_NO_DISPONIBLE",
+  "status": 503,
+  "detail": "El servicio de clientes no está disponible. Intente nuevamente en unos minutos.",
+  "instance": "/web/clientes/1/resumen",
+  "codigo": "SERVICIO_NO_DISPONIBLE"
+}
+
+Móvil: la app sigue funcionando con datos parciales:
+$ curl -sk -H "Authorization: Bearer $T_MOVIL" https://localhost:8444/movil/clientes/1/inicio | jq
+{
+  "saldoTotal": 1815000.00,
+  "cuentas": [
+    {
+      "id": 1,
+      "tipo": "AHORRO",
+      "num": "****0001",
+      "saldo": 1465000.00
+    },
+    {
+      "id": 2,
+      "tipo": "CORRIENTE",
+      "num": "****0002",
+      "saldo": 350000.00
+    }
+  ],
+  "ultimas": [
+    {
+      "f": "2026-10-11",
+      "desc": "Transferencia: Demo video",
+      "monto": 15000.00,
+      "signo": "-"
+    },
+    {
+      "f": "2026-10-11",
+      "desc": "Retiro: Cajero ATM-STGO-001",
+      "monto": 20000.00,
+      "signo": "-"
+    },
+    {
+      "f": "2026-10-11",
+      "desc": "Saldo migrado desde sistema legacy",
+      "monto": 1500000.00,
+      "signo": "+"
+    }
+  ],
+  "datosParciales": true
+}
+
+Las transferencias siguen funcionando (no dependen de clientes):
+$ curl -sk -H "Authorization: Bearer $T_MOVIL" -H 'Content-Type: application/json' -d '{"origen":1,"destino":3,"monto":1000}' https://localhost:8444/movil/transferencias | jq
+{
+  "ref": "MOV-6b8446f6-a276-4717-a6c2-82d9dd2d10c7",
+  "estado": "COMPLETADO",
+  "msg": "Transferencia realizada"
+}
+
+
+[ENTER para continuar]
+$ docker compose start ms-clientes
+ Container banco-xyz-postgres-1  Waiting
+ Container banco-xyz-config-server-1  Waiting
+ Container banco-xyz-eureka-server-1  Waiting
+ Container banco-xyz-auth-server-1  Waiting
+ Container banco-xyz-kafka-1  Waiting
+ Container banco-xyz-kafka-1  Healthy
+ Container banco-xyz-auth-server-1  Healthy
+ Container banco-xyz-postgres-1  Healthy
+ Container banco-xyz-eureka-server-1  Healthy
+ Container banco-xyz-config-server-1  Healthy
+ Container banco-xyz-ms-clientes-1  Starting
+ Container banco-xyz-ms-clientes-1  Started
+
+ms-clientes vuelve en ~30-60 s y el circuito se cierra solo.
+
+Fin de la demo ✔

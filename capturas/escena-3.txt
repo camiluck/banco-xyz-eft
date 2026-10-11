@@ -1,0 +1,53 @@
+
+ESCENA 3 · BFF: cada canal recibe sólo lo que necesita
+$ curl -sk -H "Authorization: Bearer $T_MOVIL" https://localhost:8444/movil/clientes/1/inicio | jq
+{
+  "nombre": "Juan",
+  "saldoTotal": 1850000.00,
+  "cuentas": [
+    {
+      "id": 1,
+      "tipo": "AHORRO",
+      "num": "****0001",
+      "saldo": 1500000.00
+    },
+    {
+      "id": 2,
+      "tipo": "CORRIENTE",
+      "num": "****0002",
+      "saldo": 350000.00
+    }
+  ],
+  "ultimas": [
+    {
+      "f": "2026-10-11",
+      "desc": "Saldo migrado desde sistema legacy",
+      "monto": 1500000.00,
+      "signo": "+"
+    }
+  ]
+}
+
+
+[ENTER para continuar]
+$ curl -sk -H "Authorization: Bearer $T_WEB" https://localhost:8443/web/clientes/1/resumen | jq '{cliente: .cliente.nombres, saldoTotal, cuentas: (.cuentas|length), operaciones: (.operacionesRecientes|length), notificaciones: (.notificaciones|length)}'
+{
+  "cliente": "Juan Andrés",
+  "saldoTotal": 1850000.00,
+  "cuentas": 2,
+  "operaciones": 0,
+  "notificaciones": 0
+}
+
+
+Tamaño de la respuesta de cada canal
+$ curl -sk -o /dev/null -w 'WEB:   %{size_download} bytes\n' -H "Authorization: Bearer $T_WEB" https://localhost:8443/web/clientes/1/resumen
+WEB:   1188 bytes
+
+$ curl -sk -o /dev/null -w 'MOVIL: %{size_download} bytes\n' -H "Authorization: Bearer $T_MOVIL" https://localhost:8444/movil/clientes/1/inicio
+MOVIL: 283 bytes
+
+
+[ENTER para continuar]
+
+Fin de la demo ✔

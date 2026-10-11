@@ -1,0 +1,26 @@
+
+ESCENA 1 · El sistema corriendo en contenedores
+$ docker compose ps --format 'table {{.Name}}\t{{.Status}}'
+NAME                        STATUS
+banco-xyz-api-gateway-1     Up 2 minutes (healthy)
+banco-xyz-auth-server-1     Up 3 minutes (healthy)
+banco-xyz-batch-service-1   Up 2 minutes (healthy)
+banco-xyz-bff-atm-1         Up 2 minutes (healthy)
+banco-xyz-bff-movil-1       Up 2 minutes (healthy)
+banco-xyz-bff-web-1         Up 2 minutes (healthy)
+banco-xyz-config-server-1   Up 3 minutes (healthy)
+banco-xyz-eureka-server-1   Up 3 minutes (healthy)
+banco-xyz-kafka-1           Up 3 minutes (healthy)
+banco-xyz-kafka-ui-1        Up 3 minutes
+banco-xyz-ms-clientes-1     Up 2 minutes (healthy)
+banco-xyz-ms-cuentas-1      Up 2 minutes (healthy)
+banco-xyz-ms-cuentas-2      Up 2 minutes (healthy)
+banco-xyz-ms-pagos-1        Up 2 minutes (healthy)
+banco-xyz-ms-pagos-2        Up 2 minutes (healthy)
+banco-xyz-postgres-1        Up 3 minutes (healthy)
+
+👉 Ahora muestra Eureka en el navegador: http://localhost:8761 (2 réplicas de MS-CUENTAS y MS-PAGOS)
+
+[ENTER para continuar]
+
+Fin de la demo ✔
