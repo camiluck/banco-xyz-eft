@@ -6,7 +6,7 @@
 # =============================================================================
 set -uo pipefail
 
-AUTH=${AUTH:-http://localhost:9000}
+AUTH=${AUTH:-http://localhost:${AUTH_PORT:-9000}}
 WEB=${WEB:-https://localhost:8443}
 MOVIL=${MOVIL:-https://localhost:8444}
 ATM=${ATM:-https://localhost:8445}

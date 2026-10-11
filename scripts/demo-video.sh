@@ -7,7 +7,7 @@
 #         ./scripts/demo-video.sh 3          (sólo la escena 3)
 #  Requiere: el sistema levantado (docker compose up -d), curl y jq.
 # =============================================================================
-AUTH=http://localhost:9000; WEB=https://localhost:8443; MOVIL=https://localhost:8444
+AUTH=${AUTH:-http://localhost:${AUTH_PORT:-9000}}; WEB=https://localhost:8443; MOVIL=https://localhost:8444
 ATM=https://localhost:8445; BATCH=http://localhost:8090
 SOLO=${1:-}
 

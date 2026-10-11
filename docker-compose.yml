@@ -131,7 +131,7 @@ services:
       SECRET_FRONTEND_WEB: ${SECRET_FRONTEND_WEB:-web-secret}
       SECRET_FRONTEND_MOVIL: ${SECRET_FRONTEND_MOVIL:-movil-secret}
       SECRET_CAJERO_ATM: ${SECRET_CAJERO_ATM:-atm-secret}
-    ports: ["9000:9000"]
+    ports: ["${AUTH_PORT:-9000}:9000"]   # si el 9000 está ocupado: AUTH_PORT=9100 docker compose up -d
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:9000/actuator/health"]
       interval: 10s
