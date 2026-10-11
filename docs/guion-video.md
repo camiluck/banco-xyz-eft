@@ -37,6 +37,9 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR:** pantalla completa con la cámara, o el readme de GitHub de fondo.
 
+![Repositorio en GitHub (readme)](capturas/web-github-readme.png)
+*Repositorio en GitHub (readme)*
+
 🗣️ **DECIR:**
 > "Hola, mi nombre es ___. Les presento mi Evaluación Final Transversal de Desarrollo Backend III: la modernización del backend del Banco XYZ, migrando su sistema legacy a una arquitectura de microservicios con Spring Cloud y Spring Batch."
 
@@ -45,6 +48,9 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 ## 2. Resumen ejecutivo (0:20 – 1:20)
 
 🎬 **MOSTRAR:** pestaña 1 (GitHub, readme). Baja lentamente hasta el **diagrama de arquitectura** y, al mencionarlas, señala con el mouse cada capa: canales, BFF, gateway, microservicios, Kafka, base de datos.
+
+![Diagrama de arquitectura en el readme](capturas/web-github-diagrama.png)
+*Diagrama de arquitectura en el readme*
 
 🗣️ **DECIR:**
 > "El Banco XYZ funcionaba hace más de 30 años sobre COBOL y scripts Shell en un mainframe. Eso le generaba tres problemas: no podía escalar, el mantenimiento era muy caro y era muy difícil integrar canales nuevos.
@@ -65,6 +71,12 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR:** la tabla de contenedores, todos *healthy*. Después cambia a la pestaña 2 (**Eureka**) y señala que **MS-CUENTAS** y **MS-PAGOS** tienen **2 instancias** cada uno.
 
+![docker compose ps: los 16 contenedores healthy](capturas/term-01-compose.png)
+*docker compose ps: los 16 contenedores healthy*
+
+![Eureka: MS-CUENTAS y MS-PAGOS con 2 instancias (UP (2))](capturas/web-eureka.png)
+*Eureka: MS-CUENTAS y MS-PAGOS con 2 instancias (UP (2))*
+
 🗣️ **DECIR:**
 > "Aquí está el sistema corriendo: 16 contenedores. En Eureka se ve que cuentas y pagos tienen dos réplicas cada uno. Eso es escalabilidad horizontal: el gateway balancea la carga entre ellas, y puedo agregar más réplicas con un solo comando, sin tocar el código."
 
@@ -80,6 +92,21 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 4. El **resumen diario**.
 5. La **falla simulada**: las líneas `[SIMULACION] Falla transitoria`, los rollbacks y el estado final `COMPLETED`.
 
+![1) Se lanza el job de transacciones diarias](capturas/term-02a-lanzar.png)
+*1) Se lanza el job de transacciones diarias*
+
+![2) Resultado por paso: 1000 leídos, 789 escritos, 211 omitidos, COMPLETADO_CON_OMISIONES](capturas/term-02b-pasos.png)
+*2) Resultado por paso: 1000 leídos, 789 escritos, 211 omitidos, COMPLETADO_CON_OMISIONES*
+
+![3) Rechazos agrupados por motivo y detalle con línea y contenido](capturas/term-02c-rechazos.png)
+*3) Rechazos agrupados por motivo y detalle con línea y contenido*
+
+![4) Resumen diario generado](capturas/term-02d-resumen.png)
+*4) Resumen diario generado*
+
+![5) Falla simulada: 2 fallas, reintentos (rollbacks=2) y COMPLETED](capturas/term-02e-falla.png)
+*5) Falla simulada: 2 fallas, reintentos (rollbacks=2) y COMPLETED*
+
 🗣️ **DECIR:**
 > "Esta es la Parte 1. Migré los tres procesos batch: transacciones diarias, intereses mensuales y estados de cuenta anuales. Cada uno lee los archivos del legacy, valida, normaliza y escribe en chunks transaccionales.
 >
@@ -91,6 +118,9 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR (5 segundos):** pestaña 1, sección **"Equivalencia con el legacy"** del readme (la tabla).
 
+![Tabla de equivalencia con el legacy en el readme](capturas/web-github-equivalencia.png)
+*Tabla de equivalencia con el legacy en el readme*
+
 🗣️ **DECIR:**
 > "Para asegurar que los resultados son equivalentes al legacy, implementé las mismas reglas de forma independiente y las pruebas automáticas comparan los totales: coinciden exactamente."
 
@@ -100,6 +130,12 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR:** la respuesta del móvil (corta, con la cuenta enmascarada `****0001`), luego el resumen web y, al final, la **comparación de bytes** WEB vs MOVIL.
 
+![Respuesta del BFF móvil: corta y con la cuenta enmascarada](capturas/term-03a-movil.png)
+*Respuesta del BFF móvil: corta y con la cuenta enmascarada*
+
+![Resumen web y comparación de tamaño: WEB vs MÓVIL](capturas/term-03b-web.png)
+*Resumen web y comparación de tamaño: WEB vs MÓVIL*
+
 🗣️ **DECIR:**
 > "Parte 2: el patrón Backend for Frontend. Antes, todos los canales recibían la misma respuesta pesada del monolito. Ahora el BFF móvil entrega sólo lo esencial: nombres cortos, número de cuenta enmascarado, compresión gzip y ETag. El BFF web entrega el dashboard completo y arma las consultas en paralelo. Miren la diferencia de tamaño entre las dos respuestas."
 
@@ -108,6 +144,12 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 ⌨️ **EJECUTAR:** `./scripts/demo-video.sh 4`
 
 🎬 **MOSTRAR:** el `HTTP 401`, el `TERMINAL_NO_AUTORIZADO`, el `PIN_INCORRECTO` y los **dos retiros con el mismo comprobante**.
+
+![Token de otro canal (401), terminal falso (403) y PIN incorrecto (401)](capturas/term-04a-seguridad.png)
+*Token de otro canal (401), terminal falso (403) y PIN incorrecto (401)*
+
+![El mismo retiro enviado 2 veces: mismo comprobante y mismo saldo](capturas/term-04b-retiros.png)
+*El mismo retiro enviado 2 veces: mismo comprobante y mismo saldo*
 
 🗣️ **DECIR:**
 > "Cada canal tiene su propia autenticación con OAuth2 y JWT. Un token del canal web no sirve en la app móvil: responde 401. El cajero, además del token, exige un terminal registrado y el PIN, que se bloquea a los tres intentos fallidos. Todo viaja por HTTPS.
@@ -120,12 +162,21 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR:** la transferencia `COMPLETADO` y el aviso que recibió el cliente 2. Después ve a la pestaña 3 (**Kafka UI**) → *Topics* → `transacciones-completadas` → *Messages* y abre el último mensaje.
 
+![Transferencia completada y aviso recibido por el cliente 2](capturas/term-05-kafka.png)
+*Transferencia completada y aviso recibido por el cliente 2*
+
+![Kafka UI: mensajes del tópico transacciones-completadas](capturas/web-kafka-mensajes.png)
+*Kafka UI: mensajes del tópico transacciones-completadas*
+
 🗣️ **DECIR:**
 > "Parte 3: los microservicios se comunican por eventos. Al completar la transferencia, pagos publica un evento en Kafka y el microservicio de clientes lo consume en tiempo real para notificar a la persona que recibió el dinero. Aquí se ve el mensaje en el tópico."
 
 ### 3.6 Comparación con el legacy (3:50 – 4:05)
 
 🎬 **MOSTRAR:** pestaña 1, tabla **"Comparación con el sistema legacy"** del readme.
+
+![Tabla de comparación con el legacy en el readme](capturas/web-github-comparacion.png)
+*Tabla de comparación con el legacy en el readme*
 
 🗣️ **DECIR:**
 > "En resumen, frente al legacy: pasamos de escalar en vertical a escalar en horizontal; de un sistema donde un error lo botaba todo, a servicios aislados con circuit breaker; de procesos batch que había que repetir desde cero, a reinicios desde el último punto; y de seguridad perimetral, a un token validado en cada servicio y por canal."
@@ -138,12 +189,21 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR:** pestaña 4 (**FechaParser.java**) y señala la lista de formatos de fecha.
 
+![FechaParser.java: los 4 formatos de fecha del legacy](capturas/codigo-fechaparser.png)
+*FechaParser.java: los 4 formatos de fecha del legacy*
+
 🗣️ **DECIR:**
 > "El primer desafío fueron los datos legacy. Las fechas venían en cuatro formatos distintos, había montos vacíos, negativos y registros duplicados. La solución fue leer todo como texto y separar tres casos: lo que se puede corregir, como las fechas, se normaliza; lo sospechoso, como un monto negativo, se guarda marcado como anomalía; y lo inválido se omite, pero queda auditado."
 
 ### Desafío 2: transferencias entre microservicios (4:30 – 5:00)
 
 🎬 **MOSTRAR:** pestaña 5 (**PagoService.java**) y baja hasta el método `ejecutar` y el método `compensar`.
+
+![PagoService.ejecutar(): débito, crédito y compensación si el destino rechaza](capturas/codigo-pagoservice.png)
+*PagoService.ejecutar(): débito, crédito y compensación si el destino rechaza*
+
+![PagoService.compensar(): devuelve el dinero a la cuenta origen](capturas/codigo-compensar.png)
+*PagoService.compensar(): devuelve el dinero a la cuenta origen*
 
 🗣️ **DECIR:**
 > "El segundo desafío: una transferencia toca dos cuentas, pero ya no hay una sola base de datos. Lo resolví con el patrón Saga: primero se debita, luego se acredita, y si el destino rechaza, se ejecuta una compensación que devuelve el dinero. Cada movimiento lleva una referencia única, así que un reintento nunca descuenta dos veces. Si el servicio de cuentas está caído, el pago queda pendiente y se completa solo cuando el servicio vuelve."
@@ -154,6 +214,12 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 
 🎬 **MOSTRAR:** `docker compose stop ms-clientes`, luego el **503 SERVICIO_NO_DISPONIBLE** en web, el **`datosParciales: true`** en móvil y la transferencia que **sí funciona**.
 
+![Se apaga ms-clientes: la web responde 503 controlado](capturas/term-06a-caida.png)
+*Se apaga ms-clientes: la web responde 503 controlado*
+
+![El móvil sigue con datos parciales y la transferencia funciona](capturas/term-06b-parcial.png)
+*El móvil sigue con datos parciales y la transferencia funciona*
+
 🗣️ **DECIR:**
 > "El tercer desafío fue que una falla no botara todo el sistema. Voy a apagar en vivo el microservicio de clientes. La web responde de inmediato con un error controlado, no con un timeout, gracias al circuit breaker de Resilience4j. La app móvil sigue funcionando con datos parciales. Y las transferencias siguen operando, porque no dependen de ese servicio. Cuando el servicio vuelve, el circuito se cierra solo."
 
@@ -162,6 +228,12 @@ docker compose ps          # espera a que TODOS digan (healthy), 3 a 5 minutos
 ## 5. Propuestas de mejora y próximos pasos (5:35 – 6:15)
 
 🎬 **MOSTRAR:** pestaña 6 (**GitHub Actions** en verde). Al hablar del despliegue, abre `despliegue.md` en GitHub.
+
+![GitHub Actions: todas las ejecuciones en verde](capturas/web-github-actions.png)
+*GitHub Actions: todas las ejecuciones en verde*
+
+![despliegue.md: guía para AWS](capturas/web-github-despliegue.png)
+*despliegue.md: guía para AWS*
 
 🗣️ **DECIR:**
 > "El proyecto tiene integración continua: en cada cambio, GitHub compila, ejecuta las pruebas y levanta el sistema completo con Docker para probarlo de punta a punta.
