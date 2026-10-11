@@ -1,0 +1,26 @@
+name: Capturas GitHub para el video
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capturas
+        run: |
+          mkdir -p capturas
+          cd .github/capturas && npm init -y >/dev/null && npm i playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          node capturar-github.mjs ../../capturas
+      - name: Publicar en la rama "capturas-github"
+        run: |
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git checkout --orphan capturas-github
+          git rm -rfq --cached . >/dev/null
+          git add capturas
+          git commit -qm "Capturas GitHub"
+          git push -f origin capturas-github
